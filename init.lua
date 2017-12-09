@@ -41,6 +41,10 @@ function INPUT.getAxis(axis_name)
   return _joystick:getAxis(_analog[axis_name])
 end
 
+function INPUT.getJoystick()
+  return _joystick
+end
+
 function INPUT.setup(digital, analog)
   _digital = digital or {}
   _analog = analog or {}
@@ -61,8 +65,9 @@ function INPUT.save()
   if not _digital or not _analog then return end
   local dmap = _stringTable(_digital)
   local amap = _stringTable(_analog)
-  local content = "return { digital = "..dmap..", analog = "..amap.." }"
+  local content = "return { \ndigital = "..dmap..",\nanalog = "..amap.."\n}\n"
   local file = assert(FS.newFile(_CONTROLS_FILENAME, "w"))
+  print(content)
   assert(file:write(content))
   return assert(file:close())
 end
@@ -100,14 +105,14 @@ function _joystickReleased(joystick, button)
 end
 
 function _stringTable(t)
-  local s = "{"
+  local s = "{\n"
   for k,v in pairs(t) do
     local key, value = false, false
     local key_type, value_type = _TYPE_ENUM[type(k)], _TYPE_ENUM[type(v)]
 
     -- key has to be string
     if key_type == 0 then
-      key = "['"..k.."']"
+      key = k
     end
 
     -- value can be either string or number
@@ -118,10 +123,9 @@ function _stringTable(t)
     end
 
     if key and value then
-      s = s .. key .. " = " .. value .. ","
+      s = s .. "  " .. key .. " = " .. value .. ",\n"
     end
   end
-  s = s:gsub("(,)$", "")
   s = s .. "}"
   return s
 end

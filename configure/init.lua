@@ -17,7 +17,7 @@ local CALLBACKS = {
 local Configure = require 'input.configure.state'
 
 -- forward declaration
-local _start
+local _input
 local _toggleEvents
 
 -- loads or unloads inputs
@@ -27,16 +27,20 @@ function _toggleEvents()
   end
 end
 
-function Configure.quit()
+function Configure.quit(mappings)
   print(LINE, "All set, carry on")
   print(DIV)
+  _input.setup(mappings.digital, mappings.analog)
+  _input = nil
   _toggleEvents()
 end
 
 -- mappings.digital is a digital mapping table (handle -> key/button)
 -- mappings.analog is an analog mapping table (handle -> axis_id)
 return function (input, mappings)
+  assert(input, "No input module loaded")
   _toggleEvents()
-  Configure.load(input, mappings)
+  _input = input
+  Configure.load(mappings, input.getJoystick())
 end
 

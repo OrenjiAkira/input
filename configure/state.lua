@@ -6,20 +6,32 @@ local STATES = {
   "GREETINGS", "DIGITAL", "ANALOG", "CONFIRM",
 }
 local DIV = "-------------------------------"
-local LINE = "--"
-
+local LINE = "-- "
+local ANALOG
+local DIGITAL
 
 -- locals
-local _input
+local _joystick
 local _mappings
 local _context
 
-function Configure.load(input, mappings)
-  assert(input, "No input module loaded")
+function Configure.load(mappings, joystick)
   assert(mappings and mappings.digital and mappings.analog,
          "Invalid mappings argument passed.")
   print(DIV)
-  _input = input
+  print(LINE.."Start mapping inputs!")
+
+  ANALOG, DIGITAL = {}, {}
+  for handle in pairs(mappings.digital) do
+    table.insert(DIGITAL, handle)
+  end
+  for handle in pairs(mappings.analog) do
+    table.insert(ANALOG, handle)
+  end
+  table.sort(DIGITAL)
+  table.sort(ANALOG)
+
+  _joystick = joystick
   _mappings = mappings
   _context = 1
 end
@@ -29,9 +41,8 @@ end
 
 local DEADZONE = .2
 
-local _pressed = {}
-local _last_handle
-local _joystick
+local _pressed
+local _current
 local _flush
 local _wait
 local _loadJoystick
@@ -55,7 +66,7 @@ function Configure.update(dt)
     _updateConfirm(dt)
   elseif _context == 5 then
     if _wait(dt) then
-      Configure.quit()
+      Configure.quit(_mappings)
     end
   end
 
@@ -64,18 +75,18 @@ function Configure.update(dt)
 end
 
 function Configure.keypressed(key)
-  _pressed[key] = true
+  _pressed = key
 end
 
 function Configure.joystickpressed(joystick, button)
   if not _joystick or joystick ~= _joystick then
     return _loadJoystick(joystick)
   end
-  _pressed[button] = true
+  _pressed = button
 end
 
 function _flush()
-  for key in pairs(_pressed) do _pressed[key] = false end
+  _pressed = nil
 end
 
 function _waitFor(sec)
@@ -88,38 +99,45 @@ end
 function _loadJoystick(joystick)
   _joystick = joystick
   local rumble = _joystick:setVibration(1, 1, .5)
-  print(("%s: rumble %s"):format(_joystick, rumble and "on" or "off"))
+  print(LINE..
+        ("Joystick found: %s (rumble %s)"):format(_joystick,
+                                                  rumble and "on" or "off"
+        )
+  )
 end
 
 function _updateGreetings(dt)
   if not _wait(dt) then return end
-  if _pressed['return'] then
+  if _pressed == 'return' then
     _context = _context + 1
     _waitFor(.25)
   end
 end
 
-function _updateDigital()
+function _updateDigital(dt)
   if not _wait(dt) then return end
-  local key = next(_pressed)
-  local handle = next(_mappings.digital, _last_handle)
+  _current = _current or 1
+  local key = _pressed
+  local handle = DIGITAL[_current]
   if handle == nil then
     _context = _context + 1
-    _last_handle = nil
+    _current = nil
     _waitFor(.25)
   elseif key then
+    print(LINE..handle..":", key)
     _mappings.digital[handle] = key
-    _last_handle = handle
+    _current = _current + 1
     _waitFor(.25)
   end
 end
 
-function _updateAnalog()
+function _updateAnalog(dt)
   if not _wait(dt) then return end
-  local handle = next(_mappings.analog, _last_handle)
+  _current = _current or 1
+  local handle = ANALOG[_current]
   if handle == nil then
     _context = _context + 1
-    _last_handle = nil
+    _current = nil
     _waitFor(.25)
   elseif _joystick then
     local axis_id
@@ -134,19 +152,20 @@ function _updateAnalog()
       end
     end
     if axis_id then
+      print(LINE..handle..":", axis_id)
       _mappings.analog[handle] = axis_id
-      _last_handle = handle
+      _current = _current + 1
       _waitFor(.25)
     end
   end
 end
 
-function _updateConfirm()
+function _updateConfirm(dt)
   if not _wait(dt) then return end
-  if _pressed['y'] then
+  if _pressed == 'y' then
     _context = _context + 1
     _waitFor(0.75)
-  elseif _pressed['n'] then
+  elseif _pressed == 'n' then
     _context = 1
     _waitFor(.25)
   end
@@ -161,16 +180,20 @@ end
 --[[ RENDERING ]]--
 
 
-local PD = 8
+local PD = 16
 local LH = 1
-local FSZ = 24
+local FSZ = 16
+local NEUTRAL = {0xff, 0xff, 0xff}
+local HIGHLIGHT = {0xf0, 0x40, 0x40}
 local FONT
 
 local _drawWindow
+local _drawMappings
 local _drawGreetings
 local _drawDigital
 local _drawAnalog
 local _drawConfirm
+local _parseColoredText
 
 function Configure.draw()
   local g = love.graphics
@@ -180,6 +203,8 @@ function Configure.draw()
     FONT:setLineHeight(LH)
   end
   g.setFont(FONT)
+
+  _drawMappings(g)
 
   -- draw contexts
   if     _context == 1 then
@@ -196,47 +221,76 @@ function Configure.draw()
   end
 end
 
+function _parseColoredText(text)
+  local colored = {NEUTRAL}
+  local l = 1
+  for r = 1, #text do
+    if text:byte(r) == 42 then
+      local color = colored[#colored]
+      print("color:", color)
+      if color == NEUTRAL then
+        color = HIGHLIGHT
+      elseif color == HIGHLIGHT then
+        color = NEUTRAL
+      end
+      local excerpt = text:sub(l, r-1)
+      print("text: ", select(1, excerpt:gsub("\n", "\\n")))
+      table.insert(colored, excerpt)
+      table.insert(colored, color)
+      l = r + 1
+    end
+  end
+  table.insert(colored, text:sub(l,-1))
+  return colored
+end
+
 function _drawWindow(text, x, y, wlimit, align)
   local g = love.graphics
-  local width, wrapped = _font:getWrap(text, wlimit)
-  local height = #wrapped * _font:getHeight() * LH
+  local _, wrapped = FONT:getWrap(text, wlimit)
+  local height = #wrapped * FONT:getHeight() * LH
+  local width = wlimit
+  local colored = _parseColoredText(text)
   g.push()
   g.translate(x - width/2, y - height/2)
   g.setColor(0x22, 0x50, 0x72)
   g.rectangle("fill", -PD, -PD, width+PD*2, height+PD*2)
   g.setColor(0xff, 0xff, 0xff)
-  g.printf(text, 0, 0, wlimit, align)
-  local handle, current = next(_mappings, _last_handle)
-  current = current == true and "UNSET"
-  _drawWindow(map_the_digital:format(handle, current),
-              width/2, height/2, 360, "left")
+  g.printf(colored, 0, 0, width, align)
   g.pop()
 end
 
 function _drawMappings(g)
-  local height = _font:getHeight()
+  local height = FONT:getHeight()
   g.push()
   g.translate(32, 32)
-  for action, key in pairs(_mappings.digital) do
+  local handle
+  if _context == 2 then
+    handle = DIGITAL[_current]
+  elseif current == 3 then
+    handle = ANALOG[_current]
+  end
+  for _,action in ipairs(DIGITAL) do
+    local key = _mappings.digital[action]
     local unset = (key == true) and "UNSET"
     local button = (type(key) == 'number') and ("BTN %d"):format(key)
-    g.print(("%s: [%s]"):format(action, unset or button or key))
-    if _context == 2 and _last_handle == action then
+    if handle == action then
       g.setColor(80, 100, 255)
     else
       g.setColor(255, 255, 255)
     end
+    g.print(("%s: [%s]"):format(action, unset or button or key))
     g.translate(0, height)
   end
   g.translate(0, height)
-  for axis_name, idx in pairs(_mappings.analog) do
+  for _,axis_name in ipairs(ANALOG) do
+    local idx = _mappings.analog[axis_name]
     local unset = (idx == true) and "UNSET"
-    g.print(("%s: [%s]"):format(action, unset or idx))
-    if _context == 3 and _last_handle == action then
-      g.setColor(80, 100, 255)
+    if handle == axis_name then
+      g.setColor(80, 180, 255)
     else
       g.setColor(255, 255, 255)
     end
+    g.print(("%s: [%s]"):format(axis_name, unset or idx))
     g.translate(0, height)
   end
   g.pop()
@@ -244,44 +298,50 @@ end
 
 local greetings = [=[
 We'll be mapping all actions to keys now.
-Press [enter/return] to continue.]=]
+Press *[enter/return]* to continue.]=]
 function _drawGreetings(g)
   local width, height = g.getDimensions()
-  _drawWindow(greetings, width/2, height/2, 360, "left")
+  _drawWindow(greetings, width/2, height/2, 360, "center")
 end
 
 local map_the_digital = [=[
-Press the key you want for [%s]
-(current: %s)]=]
+Press the key you want for *[%s]*
+(current: *%s*)]=]
 function _drawDigital(g)
   local width, height = g.getDimensions()
-  local handle, current = next(_mappings.digital, _last_handle)
+  local handle = DIGITAL[_current]
+  local current = _mappings.digital[handle]
   current = (current == true) and "UNSET" or current
   current = (type(current) == 'number')
             and ("BTN %d"):format(current) or current
-  _drawWindow(map_the_digital:format(handle, current),
-              width/2, height/2, 360, "center")
+  if handle and current then
+    _drawWindow(map_the_digital:format(handle, current),
+                width/2, height/2, 360, "center")
+  end
 end
 
 local map_the_analog = [=[
-Move the analog input you want for [%s]
-(current: %s)]=]
+Move the analog input you want for *[%s]*
+(current: *%s*)]=]
 function _drawAnalog(g)
   local width, height = g.getDimensions()
-  local handle, current = next(_mappings.analog, _last_handle)
+  local handle = ANALOG[_current]
+  local current = _mappings.analog[handle]
   current = (current == true) and "UNSET" or current
   current = (type(current) == 'number')
             and ("AXIS #%s"):format(current) or "UNSET"
-  _drawWindow(map_the_analog:format(handle, current),
-              width/2, height/2, 360, "center")
+  if handle and current then
+    _drawWindow(map_the_analog:format(handle, current),
+                width/2, height/2, 360, "center")
+  end
 end
 
 
 local are_you_sure = [=[
-Are you sure? [y/n]]=]
+Are you sure? *[y/n]*]=]
 function _drawConfirm(g)
   local width, height = g.getDimensions()
-  _drawWindow(greetings, width/2, height/2, 360, "center")
+  _drawWindow(are_you_sure, width/2, height/2, 360, "center")
 end
 
 
