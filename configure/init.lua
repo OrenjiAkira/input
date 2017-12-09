@@ -1,7 +1,7 @@
 
 -- constants
 local DIV = "-------------------------------"
-local LINE = "--"
+local LINE = "-- "
 local CALLBACKS = {
   'keypressed',
   'keyreleased',
@@ -28,7 +28,7 @@ function _toggleEvents()
 end
 
 function Configure.quit(mappings)
-  print(LINE, "All set, carry on")
+  print(LINE.."All set, carry on")
   print(DIV)
   _input.setup(mappings.digital, mappings.analog)
   _input = nil
