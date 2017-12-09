@@ -184,7 +184,7 @@ local PD = 16
 local LH = 1
 local FSZ = 16
 local NEUTRAL = {0xff, 0xff, 0xff}
-local HIGHLIGHT = {0xf0, 0x40, 0x40}
+local HIGHLIGHT = {244, 199, 0}
 local FONT
 
 local _drawWindow
@@ -227,14 +227,12 @@ function _parseColoredText(text)
   for r = 1, #text do
     if text:byte(r) == 42 then
       local color = colored[#colored]
-      print("color:", color)
       if color == NEUTRAL then
         color = HIGHLIGHT
       elseif color == HIGHLIGHT then
         color = NEUTRAL
       end
       local excerpt = text:sub(l, r-1)
-      print("text: ", select(1, excerpt:gsub("\n", "\\n")))
       table.insert(colored, excerpt)
       table.insert(colored, color)
       l = r + 1
@@ -252,7 +250,7 @@ function _drawWindow(text, x, y, wlimit, align)
   local colored = _parseColoredText(text)
   g.push()
   g.translate(x - width/2, y - height/2)
-  g.setColor(0x22, 0x50, 0x72)
+  g.setColor(0x1d, 0x35, 0x47)
   g.rectangle("fill", -PD, -PD, width+PD*2, height+PD*2)
   g.setColor(0xff, 0xff, 0xff)
   g.printf(colored, 0, 0, width, align)
@@ -306,7 +304,7 @@ end
 
 local map_the_digital = [=[
 Press the key you want for *[%s]*
-(current: *%s*)]=]
+(current: *[%s]*)]=]
 function _drawDigital(g)
   local width, height = g.getDimensions()
   local handle = DIGITAL[_current]
@@ -322,7 +320,7 @@ end
 
 local map_the_analog = [=[
 Move the analog input you want for *[%s]*
-(current: *%s*)]=]
+(current: *[%s]*)]=]
 function _drawAnalog(g)
   local width, height = g.getDimensions()
   local handle = ANALOG[_current]
