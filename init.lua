@@ -9,23 +9,18 @@ local _NOTHING = function () end
 local _joystick
 local _digital
 local _analog
+local _hat
 local _pressed = {}
 local _released = {}
 local _held = {}
 
 local _stringTable
+local _isActionActivated
 local _keyPressed
 local _keyReleased
 local _loadJoystick
 local _joystickPressed
 local _joystickReleased
-
-local function _isActionActivated(action_keys, activated_keys, idx)
-  local n = idx or 1 -- index of list
-  if action_keys[n] == nil then return false end -- end of list
-  return activated_keys[action_keys[n]] or
-         _isActionActivated(action_keys, activated_keys, n+1)
-end
 
 function INPUT.wasActionPressed(action)
   return _digital[action] and _isActionActivated(_digital[action], _pressed)
@@ -41,16 +36,22 @@ end
 
 function INPUT.getAxis(axis_name)
   if not _joystick then return 0 end
-  return _joystick:getAxis(_analog[axis_name])
+  return _analog[axis_name] and _joystick:getAxis(_analog[axis_name]) or 0
+end
+
+function INPUT.getHat(hat_name)
+  if not _joystick then return 'c' end
+  return _hat[hat_name] and _joystick:getHat(_hat[hat_name]) or 'c'
 end
 
 function INPUT.getJoystick()
   return _joystick
 end
 
-function INPUT.setup(digital, analog)
+function INPUT.setup(digital, analog, hat)
   _digital = digital or {}
   _analog = analog or {}
+  _hat = hat or {}
 
   local default_keypress        = love.keypressed       or _NOTHING
   local default_keyrelease      = love.keyreleased      or _NOTHING
@@ -91,8 +92,13 @@ function INPUT.flush()
 end
 
 function INPUT.save()
-  if not _digital or not _analog then return end
-  local content = "return ".._stringTable({ digital = _digital, analog = _analog })
+  if not _digital or not _analog or not _hat then return end
+  local map = {
+    digital = _digital,
+    analog = _analog,
+    hat = _hat,
+  }
+  local content = "return ".._stringTable(map)
   local file = assert(FS.newFile(_CONTROLS_FILENAME, "w"))
   print(content)
   assert(file:write(content))
@@ -102,29 +108,35 @@ end
 function INPUT.load()
   local content, err = FS.load(_CONTROLS_FILENAME)
   content = content and content()
-  return content and INPUT.setup(content.digital, content.analog), err
+  return content and
+         INPUT.setup(content.digital, content.analog, content.hat), err
 end
 
 function INPUT.getMaps()
-  return _digital, _analog
+  return _digital, _analog, _hat
+end
+
+function _isActionActivated(action_keys, activated_keys, idx)
+  local n = idx or 1 -- index of list
+  if action_keys[n] == nil then return false end -- end of list
+  return activated_keys[action_keys[n]] or
+         _isActionActivated(action_keys, activated_keys, n+1)
 end
 
 function _keyPressed(key)
   _pressed[key] = true
   _held[key] = true
-  print("down:", key)
 end
 
 function _keyReleased(key)
   _released[key] = true
   _held[key] = false
-  print("up:  ", key)
 end
 
 function _loadJoystick(joystick)
   _joystick = joystick
   local rumble = _joystick:setVibration(1, 1, .5)
-  print(("%s: rumble %s"):format(_joystick, rumble and "on" or "off"))
+  print(("Found %s: rumble %s"):format(_joystick, rumble and "on" or "off"))
 end
 
 function _joystickPressed(joystick, button)

@@ -9,11 +9,11 @@ local CONFIGURE = require 'input.configure'
 -- it also needs to be set up with a virtual mapping;
 -- that's specific to your game
 local DIGITAL = {
-  QUIT    = {"f8"},
-  D_UP    = {"up"},
-  D_LEFT  = {"left"},
-  D_DOWN  = {"down"},
-  D_RIGHT = {"right"},
+  QUIT      = {"f8"},
+  D_UP      = {"up"},
+  D_LEFT    = {"left"},
+  D_DOWN    = {"down"},
+  D_RIGHT   = {"right"},
   BUTTON_01 = {1},
   BUTTON_02 = {2},
   BUTTON_03 = {3},
@@ -29,8 +29,12 @@ local DIGITAL = {
 }
 
 local ANALOG = {
-  X_AXIS = 2,
-  Y_AXIS = 4,
+  X_AXIS  = 2,
+  Y_AXIS  = 4,
+}
+
+local HAT = {
+  HAT_DIR = 1
 }
 
 -- we call the setup method and pass the virtual mapping as argument
@@ -43,7 +47,7 @@ function love.load()
   if not loaded then
     -- or you can manually load it from memory with 'setup'
     -- > returns true always
-    INPUT.setup(DIGITAL, ANALOG)
+    INPUT.setup(DIGITAL, ANALOG, HAT)
   end
 end
 
@@ -71,6 +75,15 @@ function love.update(dt)
   x, y = 0
   x = INPUT.getAxis('X_AXIS')
   y = INPUT.getAxis('Y_AXIS')
+
+  local dir = INPUT.getHat('HAT_DIR')
+  if dir ~= 'c' then
+    if dir:match('l') then x = -1 end
+    if dir:match('r') then x =  1 end
+    if dir:match('u') then y = -1 end
+    if dir:match('d') then y =  1 end
+  end
+
   if x == 0 and y == 0 then
     x = x + (INPUT.isActionDown('D_LEFT')  and -1 or 0)
     x = x + (INPUT.isActionDown('D_RIGHT') and  1 or 0)
@@ -81,8 +94,8 @@ function love.update(dt)
   INPUT.flush()
 
   if love.keyboard.isDown('f1') then
-    local digital, analog = INPUT.getMaps()
-    CONFIGURE(INPUT, {digital = digital, analog = analog})
+    local digital, analog, hat = INPUT.getMaps()
+    CONFIGURE(INPUT, {digital = digital, analog = analog, hat = hat})
   end
 end
 
