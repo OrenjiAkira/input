@@ -173,9 +173,9 @@ function _stringTable(t)
 
     -- key has to be string or number
     if key_type == 0 then
-      key = k
+      key = ("%s = "):format(k)
     elseif key_type == 1 then
-      key = ("[%d]"):format(k)
+      key = ""
     end
 
     -- value can be either string or number
@@ -188,7 +188,7 @@ function _stringTable(t)
     end
 
     if key and value then
-      s = s .. "  " .. key .. " = " .. value .. ",\n"
+      s = s .. "  " .. key .. value .. ",\n"
     end
   end
   s = s .. "}"
