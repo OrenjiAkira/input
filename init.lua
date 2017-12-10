@@ -14,6 +14,7 @@ local _pressed = {}
 local _released = {}
 local _held = {}
 
+local _loadFileString
 local _stringTable
 local _isActionActivated
 local _keyPressed
@@ -91,23 +92,29 @@ function INPUT.flush()
   for k in pairs(_released) do _released[k] = false end
 end
 
-function INPUT.save()
+function INPUT.save(encoder)
   if not _digital or not _analog or not _hat then return end
   local map = {
     digital = _digital,
     analog = _analog,
     hat = _hat,
   }
-  local content = "return ".._stringTable(map)
+  local content = encoder and encoder(map) or "return ".._stringTable(map)
   local file = assert(FS.newFile(_CONTROLS_FILENAME, "w"))
   print(content)
   assert(file:write(content))
   return assert(file:close())
 end
 
-function INPUT.load()
-  local content, err = FS.load(_CONTROLS_FILENAME)
-  content = content and content()
+function INPUT.load(decoder)
+  local content, err
+  if decoder then
+    content, err = _loadFileString(_CONTROLS_FILENAME)
+    content = content and decoder(content)
+  else
+    content, err = FS.load(_CONTROLS_FILENAME)
+    content = content and content()
+  end
   return content and
          INPUT.setup(content.digital, content.analog, content.hat), err
 end
@@ -151,6 +158,11 @@ function _joystickReleased(joystick, button)
   if joystick ~= _joystick then return end
   _released[button] = true
   _held[button] = false
+end
+
+function _loadFileString(filename)
+  local filedata, err = FS.newFileData(_CONTROLS_FILENAME)
+  return filedata and filedata:getString(), err
 end
 
 function _stringTable(t)

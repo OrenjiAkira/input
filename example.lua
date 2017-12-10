@@ -5,6 +5,8 @@
 -- first we require the module
 local INPUT = require 'input'
 local CONFIGURE = require 'input.configure'
+local USE_JSON, JSON = pcall(require, 'dkjson')
+local USE_TOML, TOML = pcall(require, 'toml')
 
 -- it also needs to be set up with a virtual mapping;
 -- that's specific to your game
@@ -43,7 +45,8 @@ function love.load()
   -- > returns false if there's no controls save or if it's corrupted,
   -- > returns true if the controls were successfully loaded
   love.filesystem.setIdentity("joystick")
-  local loaded = INPUT.load()
+  local decoder = (USE_JSON and JSON.decode) or (USE_TOML and TOML.parse)
+  local loaded = INPUT.load(decoder)
   if not loaded then
     -- or you can manually load it from memory with 'setup'
     -- > returns true always
@@ -55,7 +58,17 @@ end
 function love.quit()
   -- you can save your mappings with 'save'
   -- returns true on success, throws an error if it fails
-  INPUT.save()
+  local encoder
+  if USE_JSON then
+    function encoder(data)
+      return JSON.encode(data, { indent = true })
+    end
+  elseif USE_TOML then
+    function encoder(data)
+      return TOML.encode(data)
+    end
+  end
+  INPUT.save(encoder)
 end
 
 

@@ -9,6 +9,7 @@ local DIV = "-------------------------------"
 local LINE = "-- "
 local ANALOG
 local DIGITAL
+local HAT
 
 -- locals
 local _joystick
@@ -21,15 +22,19 @@ function Configure.load(mappings, joystick)
   print(DIV)
   print(LINE.."Start mapping inputs!")
 
-  ANALOG, DIGITAL = {}, {}
+  ANALOG, DIGITAL, HAT = {}, {}, {}
   for handle in pairs(mappings.digital) do
     table.insert(DIGITAL, handle)
   end
   for handle in pairs(mappings.analog) do
     table.insert(ANALOG, handle)
   end
+  for handle in pairs(mappings.hat) do
+    table.insert(HAT, handle)
+  end
   table.sort(DIGITAL)
   table.sort(ANALOG)
+  table.sort(HAT)
 
   _joystick = joystick
   _mappings = mappings
@@ -39,7 +44,7 @@ end
 
 --[[ UPDATE ]]--
 
-local DEADZONE = .2
+local DEADZONE = .5
 
 local _pressed
 local _current
@@ -50,6 +55,7 @@ local _cycleActionInput
 local _updateGreetings
 local _updateDigital
 local _updateAnalog
+local _updateHat
 local _updateConfirm
 
 function Configure.update(dt)
@@ -64,11 +70,11 @@ function Configure.update(dt)
   elseif _context == 3 then
     _updateAnalog(dt)
   elseif _context == 4 then
-    _updateConfirm(dt)
+    _updateHat(dt)
   elseif _context == 5 then
-    if _wait(dt) then
-      Configure.quit(_mappings)
-    end
+    _updateConfirm(dt)
+  elseif _context == 6 and _wait(dt) then
+    Configure.quit(_mappings)
   end
 
   -- flush input
@@ -86,8 +92,16 @@ function Configure.joystickpressed(joystick, button)
   _pressed = button
 end
 
+function Configure.joystickhat(joystick, hat, direction)
+  if not _joystick or joystick ~= _joystick then
+    return _loadJoystick(joystick)
+  end
+  _hat = hat
+end
+
 function _flush()
   _pressed = nil
+  _hat = nil
 end
 
 function _waitFor(sec)
@@ -166,6 +180,23 @@ function _updateAnalog(dt)
   end
 end
 
+function _updateHat(dt)
+  if not _wait(dt) then return end
+  _current = _current or 1
+  local handle = HAT[_current]
+  local hat_id = _hat
+  if handle == nil then
+    _context = _context + 1
+    _current = nil
+    _waitFor(.25)
+  elseif _joystick and _hat then
+    print(LINE..handle..":", hat_id)
+    _mappings.hat[handle] = hat_id
+    _current = _current + 1
+    _waitFor(.25)
+  end
+end
+
 function _updateConfirm(dt)
   if not _wait(dt) then return end
   if _pressed == 'y' then
@@ -191,6 +222,7 @@ local LH = 1
 local FSZ = 16
 local NEUTRAL = {0xff, 0xff, 0xff}
 local HIGHLIGHT = {244, 199, 0}
+local WINDOW = {0x1d, 0x35, 0x47}
 local FONT
 
 local _drawWindow
@@ -198,6 +230,7 @@ local _drawMappings
 local _drawGreetings
 local _drawDigital
 local _drawAnalog
+local _drawHat
 local _drawConfirm
 local _parseColoredText
 
@@ -220,8 +253,10 @@ function Configure.draw()
   elseif _context == 3 then
     _drawAnalog(g)
   elseif _context == 4 then
-    _drawConfirm(g)
+    _drawHat(g)
   elseif _context == 5 then
+    _drawConfirm(g)
+  elseif _context == 6 then
     local width, height = g.getDimensions()
     _drawWindow("All done!", width/2, height/2, 360, "center")
   end
@@ -256,9 +291,9 @@ function _drawWindow(text, x, y, wlimit, align)
   local colored = _parseColoredText(text)
   g.push()
   g.translate(x - width/2, y - height/2)
-  g.setColor(0x1d, 0x35, 0x47)
+  g.setColor(WINDOW)
   g.rectangle("fill", -PD, -PD, width+PD*2, height+PD*2)
-  g.setColor(0xff, 0xff, 0xff)
+  g.setColor(NEUTRAL)
   g.printf(colored, 0, 0, width, align)
   g.pop()
 end
@@ -272,34 +307,37 @@ function _drawMappings(g)
     handle = DIGITAL[_current]
   elseif current == 3 then
     handle = ANALOG[_current]
+  elseif current == 4 then
+    handle = HAT[_current]
   end
   for _,action in ipairs(DIGITAL) do
     local key1, key2 = unpack(_mappings.digital[action])
-    local unset1 = (key1 == true) and "UNSET"
-    local unset2 = (key2 == true) and "UNSET"
     local btn1 = (type(key1) == 'number') and ("BTN %d"):format(key1)
     local btn2 = (type(key2) == 'number') and ("BTN %d"):format(key2)
-    if handle == action then
-      g.setColor(80, 100, 255)
-    else
-      g.setColor(255, 255, 255)
-    end
-    g.print(("%s: [%s] [%s]"):format(action,
-                                     unset1 or btn1 or key1,
-                                     unset2 or btn2 or key2)
+    key1 = (type(key1) == 'string') and key1 or "UNSET"
+    key2 = (type(key2) == 'string') and key2 or "UNSET"
+    if handle == action then g.setColor(HIGHLIGHT)
+    else g.setColor(NEUTRAL) end
+    g.print(("%s: [%s] [%s]"):format(action, btn1 or key1, btn2 or key2)
     )
     g.translate(0, height)
   end
   g.translate(0, height)
   for _,axis_name in ipairs(ANALOG) do
     local idx = _mappings.analog[axis_name]
-    local unset = (idx == true) and "UNSET"
-    if handle == axis_name then
-      g.setColor(80, 180, 255)
-    else
-      g.setColor(255, 255, 255)
-    end
-    g.print(("%s: [%s]"):format(axis_name, unset or idx))
+    idx = (type(idx) == 'number') and idx or "UNSET"
+    if handle == axis_name then g.setColor(HIGHLIGHT)
+    else g.setColor(NEUTRAL) end
+    g.print(("%s: [%s]"):format(axis_name, idx))
+    g.translate(0, height)
+  end
+  g.translate(0, height)
+  for _,hat_name in ipairs(HAT) do
+    local idx = _mappings.hat[hat_name]
+    idx = (type(idx) == 'number') and idx or "UNSET"
+    if handle == hat_name then g.setColor(HIGHLIGHT)
+    else g.setColor(NEUTRAL) end
+    g.print(("%s: [%s]"):format(hat_name, idx))
     g.translate(0, height)
   end
   g.pop()
@@ -315,17 +353,20 @@ end
 
 local map_the_digital = [=[
 Press the key you want for *[%s]*
-(current: *[%s]*)]=]
+(current: *[%s] [%s]*)]=]
 function _drawDigital(g)
   local width, height = g.getDimensions()
   local handle = DIGITAL[_current]
-  local current = _mappings.digital[handle]
-  current = (current == true) and "UNSET" or current
-  current = (type(current) == 'number')
-            and ("BTN %d"):format(current) or current
-  if handle and current then
-    _drawWindow(map_the_digital:format(handle, current),
-                width/2, height/2, 360, "center")
+  if not handle then return end
+  local key1 = _mappings.digital[handle][1]
+  local key2 = _mappings.digital[handle][2]
+  key1 = (type(key1) == 'number') and ("BTN %d"):format(key1) or "UNSET"
+  key2 = (type(key2) == 'number') and ("BTN %d"):format(key2) or "UNSET"
+
+  if handle and key1 then
+    _drawWindow(map_the_digital:format(handle, key1, key2),
+                width/2, height/2, 360, "center"
+    )
   end
 end
 
@@ -335,16 +376,32 @@ Move the analog input you want for *[%s]*
 function _drawAnalog(g)
   local width, height = g.getDimensions()
   local handle = ANALOG[_current]
-  local current = _mappings.analog[handle]
-  current = (current == true) and "UNSET" or current
-  current = (type(current) == 'number')
-            and ("AXIS #%s"):format(current) or "UNSET"
-  if handle and current then
-    _drawWindow(map_the_analog:format(handle, current),
-                width/2, height/2, 360, "center")
+  if not handle then return end
+  local axis_id = _mappings.analog[handle]
+  axis_id = (type(axis_id) == 'number')
+            and ("AXIS #%s"):format(axis_id) or "UNSET"
+  if handle and axis_id then
+    _drawWindow(map_the_analog:format(handle, axis_id),
+                width/2, height/2, 360, "center"
+    )
   end
 end
 
+local map_the_hat = [=[
+Move the hat input you want for *[%s]*
+(current: *[%s]*)]=]
+function _drawHat(g)
+  local width, height = g.getDimensions()
+  local handle = HAT[_current]
+  if not handle then return end
+  local hat_id = _mappings.hat[handle]
+  hat_id = (type(hat_id) == 'number') and ("HAT #%s"):format(hat_id) or "UNSET"
+  if handle and hat_id then
+    _drawWindow(map_the_hat:format(handle, hat_id),
+                width/2, height/2, 360, "center"
+    )
+  end
+end
 
 local are_you_sure = [=[
 Are you sure? *[y/n]*]=]
