@@ -46,6 +46,7 @@ local _current
 local _flush
 local _wait
 local _loadJoystick
+local _cycleActionInput
 local _updateGreetings
 local _updateDigital
 local _updateAnalog
@@ -106,6 +107,11 @@ function _loadJoystick(joystick)
   )
 end
 
+function _cycleActionInput(action_keys, new_key)
+  action_keys[1], new_key = new_key, action_keys[1]
+  action_keys[2], new_key = new_key, action_keys[2]
+end
+
 function _updateGreetings(dt)
   if not _wait(dt) then return end
   if _pressed == 'return' then
@@ -125,7 +131,7 @@ function _updateDigital(dt)
     _waitFor(.25)
   elseif key then
     print(LINE..handle..":", key)
-    _mappings.digital[handle] = key
+    _cycleActionInput(_mappings.digital[handle], key)
     _current = _current + 1
     _waitFor(.25)
   end
@@ -268,15 +274,20 @@ function _drawMappings(g)
     handle = ANALOG[_current]
   end
   for _,action in ipairs(DIGITAL) do
-    local key = _mappings.digital[action]
-    local unset = (key == true) and "UNSET"
-    local button = (type(key) == 'number') and ("BTN %d"):format(key)
+    local key1, key2 = unpack(_mappings.digital[action])
+    local unset1 = (key1 == true) and "UNSET"
+    local unset2 = (key2 == true) and "UNSET"
+    local btn1 = (type(key1) == 'number') and ("BTN %d"):format(key1)
+    local btn2 = (type(key2) == 'number') and ("BTN %d"):format(key2)
     if handle == action then
       g.setColor(80, 100, 255)
     else
       g.setColor(255, 255, 255)
     end
-    g.print(("%s: [%s]"):format(action, unset or button or key))
+    g.print(("%s: [%s] [%s]"):format(action,
+                                     unset1 or btn1 or key1,
+                                     unset2 or btn2 or key2)
+    )
     g.translate(0, height)
   end
   g.translate(0, height)

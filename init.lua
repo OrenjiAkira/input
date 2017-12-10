@@ -105,6 +105,10 @@ function INPUT.load()
   return content and INPUT.setup(content.digital, content.analog), err
 end
 
+function INPUT.getMaps()
+  return _digital, _analog
+end
+
 function _keyPressed(key)
   _pressed[key] = true
   _held[key] = true

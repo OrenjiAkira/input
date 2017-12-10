@@ -14,15 +14,15 @@ local DIGITAL = {
   D_LEFT  = {"left"},
   D_DOWN  = {"down"},
   D_RIGHT = {"right"},
-  BUTTON_1 = {1},
-  BUTTON_2 = {2},
-  BUTTON_3 = {3},
-  BUTTON_4 = {4},
-  BUTTON_5 = {5},
-  BUTTON_6 = {6},
-  BUTTON_7 = {7},
-  BUTTON_8 = {8},
-  BUTTON_9 = {9},
+  BUTTON_01 = {1},
+  BUTTON_02 = {2},
+  BUTTON_03 = {3},
+  BUTTON_04 = {4},
+  BUTTON_05 = {5},
+  BUTTON_06 = {6},
+  BUTTON_07 = {7},
+  BUTTON_08 = {8},
+  BUTTON_09 = {9},
   BUTTON_10 = {10},
   BUTTON_11 = {11},
   BUTTON_12 = {12},
@@ -81,7 +81,8 @@ function love.update(dt)
   INPUT.flush()
 
   if love.keyboard.isDown('f1') then
-    CONFIGURE(INPUT, {digital = DIGITAL, analog = ANALOG})
+    local digital, analog = INPUT.getMaps()
+    CONFIGURE(INPUT, {digital = digital, analog = analog})
   end
 end
 
