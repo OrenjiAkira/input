@@ -9,20 +9,28 @@ local CONFIGURE = require 'input.configure'
 -- it also needs to be set up with a virtual mapping;
 -- that's specific to your game
 local DIGITAL = {
-  QUIT    = "f8",
-  D_UP    = "up",
-  D_LEFT  = "left",
-  D_DOWN  = "down",
-  D_RIGHT = "right",
-  BUTTON_1 = 1,
-  BUTTON_2 = 2,
-  BUTTON_3 = 3,
-  BUTTON_4 = 4,
+  QUIT    = {"f8"},
+  D_UP    = {"up"},
+  D_LEFT  = {"left"},
+  D_DOWN  = {"down"},
+  D_RIGHT = {"right"},
+  BUTTON_1 = {1},
+  BUTTON_2 = {2},
+  BUTTON_3 = {3},
+  BUTTON_4 = {4},
+  BUTTON_5 = {5},
+  BUTTON_6 = {6},
+  BUTTON_7 = {7},
+  BUTTON_8 = {8},
+  BUTTON_9 = {9},
+  BUTTON_10 = {10},
+  BUTTON_11 = {11},
+  BUTTON_12 = {12},
 }
 
 local ANALOG = {
-  X_AXIS = 1,
-  Y_AXIS = 2,
+  X_AXIS = 2,
+  Y_AXIS = 4,
 }
 
 -- we call the setup method and pass the virtual mapping as argument
@@ -105,6 +113,7 @@ function love.draw()
   -- now let's draw the currently held buttons on screen too
   g.push()
   g.setNewFont(16)
+  g.setColor(255, 255, 255)
   g.translate(64, 64)
   for i,button in ipairs(held) do
     g.print(("[%s]"):format(button), 0, 0)

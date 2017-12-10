@@ -2,7 +2,7 @@
 local INPUT = {}
 local FS = love.filesystem
 
-local _TYPE_ENUM = { string = 0, number = 1 }
+local _TYPE_ENUM = { string = 0, number = 1, table = 2 }
 local _CONTROLS_FILENAME = "controls"
 
 local _joystick
@@ -10,6 +10,7 @@ local _digital
 local _analog
 local _pressed = {}
 local _released = {}
+local _held = {}
 
 local _stringTable
 local _keyPressed
@@ -18,22 +19,23 @@ local _loadJoystick
 local _joystickPressed
 local _joystickReleased
 
+local function _isActionActivated(action_keys, activated_keys, idx)
+  local n = idx or 1 -- index of list
+  if action_keys[n] == nil then return false end -- end of list
+  return activated_keys[action_keys[n]] or
+         _isActionActivated(action_keys, activated_keys, n+1)
+end
+
 function INPUT.isActionPressed(action)
-  return _pressed[_digital[action]]
+  return _digital[action] and _isActionActivated(_digital[action], _pressed)
 end
 
 function INPUT.isActionReleased(action)
-  return _released[_digital[action]]
+  return _digital[action] and _isActionActivated(_digital[action], _released)
 end
 
 function INPUT.isActionHeld(action)
-  local key = _digital[action]
-  local key_type = _TYPE_ENUM[type(key)]
-  if key_type == 0 then
-    return love.keyboard.isDown(key)
-  elseif _joystick and key_type == 1 then
-    return _joystick:isDown(key)
-  end
+  return _digital[action] and _isActionActivated(_digital[action], _held)
 end
 
 function INPUT.getAxis(axis_name)
@@ -57,15 +59,16 @@ function INPUT.setup(digital, analog)
 end
 
 function INPUT.flush()
+  -- this should be called last thing in the main update function
+  -- it resets the states of 'pressed' and 'released' from keys,
+  -- making only 'held' keys persist after first frame.
   for k in pairs(_pressed) do _pressed[k] = false end
   for k in pairs(_released) do _released[k] = false end
 end
 
 function INPUT.save()
   if not _digital or not _analog then return end
-  local dmap = _stringTable(_digital)
-  local amap = _stringTable(_analog)
-  local content = "return { \ndigital = "..dmap..",\nanalog = "..amap.."\n}\n"
+  local content = "return ".._stringTable({ digital = _digital, analog = _analog })
   local file = assert(FS.newFile(_CONTROLS_FILENAME, "w"))
   print(content)
   assert(file:write(content))
@@ -80,10 +83,12 @@ end
 
 function _keyPressed(key)
   _pressed[key] = true
+  _held[key] = true
 end
 
 function _keyReleased(key)
   _released[key] = true
+  _held[key] = false
 end
 
 function _loadJoystick(joystick)
@@ -97,11 +102,13 @@ function _joystickPressed(joystick, button)
     return _loadJoystick(joystick)
   end
   _pressed[button] = true
+  _held[button] = true
 end
 
 function _joystickReleased(joystick, button)
   if joystick ~= _joystick then return end
   _released[button] = true
+  _held[button] = false
 end
 
 function _stringTable(t)
@@ -110,9 +117,11 @@ function _stringTable(t)
     local key, value = false, false
     local key_type, value_type = _TYPE_ENUM[type(k)], _TYPE_ENUM[type(v)]
 
-    -- key has to be string
+    -- key has to be string or number
     if key_type == 0 then
       key = k
+    elseif key_type == 1 then
+      key = ("[%d]"):format(k)
     end
 
     -- value can be either string or number
@@ -120,6 +129,8 @@ function _stringTable(t)
       value = "'"..v.."'"
     elseif value_type == 1 then
       value = tostring(v)
+    elseif value_type == 2 then
+      value = _stringTable(v)
     end
 
     if key and value then
