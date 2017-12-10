@@ -59,12 +59,12 @@ local x, y = 0, 0
 local held = {}
 
 function love.update(dt)
-  if INPUT.isActionPressed('QUIT') then return love.event.quit() end
+  if INPUT.wasActionPressed('QUIT') then return love.event.quit() end
 
   -- set held buttons
   while #held > 0 do held[#held] = nil end
   for action, key in pairs(DIGITAL) do
-    if INPUT.isActionHeld(action) then held[#held+1] = action end
+    if INPUT.isActionDown(action) then held[#held+1] = action end
   end
 
   -- set directional input
@@ -72,10 +72,10 @@ function love.update(dt)
   x = INPUT.getAxis('X_AXIS')
   y = INPUT.getAxis('Y_AXIS')
   if x == 0 and y == 0 then
-    x = x + (INPUT.isActionHeld('D_LEFT')  and -1 or 0)
-    x = x + (INPUT.isActionHeld('D_RIGHT') and  1 or 0)
-    y = y + (INPUT.isActionHeld('D_UP')    and -1 or 0)
-    y = y + (INPUT.isActionHeld('D_DOWN')  and  1 or 0)
+    x = x + (INPUT.isActionDown('D_LEFT')  and -1 or 0)
+    x = x + (INPUT.isActionDown('D_RIGHT') and  1 or 0)
+    y = y + (INPUT.isActionDown('D_UP')    and -1 or 0)
+    y = y + (INPUT.isActionDown('D_DOWN')  and  1 or 0)
   end
 
   INPUT.flush()

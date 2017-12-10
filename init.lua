@@ -4,6 +4,7 @@ local FS = love.filesystem
 
 local _TYPE_ENUM = { string = 0, number = 1, table = 2 }
 local _CONTROLS_FILENAME = "controls"
+local _NOTHING = function () end
 
 local _joystick
 local _digital
@@ -26,15 +27,15 @@ local function _isActionActivated(action_keys, activated_keys, idx)
          _isActionActivated(action_keys, activated_keys, n+1)
 end
 
-function INPUT.isActionPressed(action)
+function INPUT.wasActionPressed(action)
   return _digital[action] and _isActionActivated(_digital[action], _pressed)
 end
 
-function INPUT.isActionReleased(action)
+function INPUT.wasActionReleased(action)
   return _digital[action] and _isActionActivated(_digital[action], _released)
 end
 
-function INPUT.isActionHeld(action)
+function INPUT.isActionDown(action)
   return _digital[action] and _isActionActivated(_digital[action], _held)
 end
 
@@ -50,11 +51,34 @@ end
 function INPUT.setup(digital, analog)
   _digital = digital or {}
   _analog = analog or {}
-  love.keypressed = _keyPressed
-  love.keyreleased = _keyReleased
-  love.joystickpressed  = _joystickPressed
-  love.joystickreleased = _joystickReleased
-  love.joystickadded = _loadJoystick
+
+  local default_keypress        = love.keypressed       or _NOTHING
+  local default_keyrelease      = love.keyreleased      or _NOTHING
+  local default_joystickpress   = love.joystickpressed  or _NOTHING
+  local default_joystickrelease = love.joystickreleased or _NOTHING
+  local default_joystickadded   = love.joystickadded    or _NOTHING
+
+  love.keypressed = function(key)
+    default_keypress(key)
+    _keyPressed(key)
+  end
+  love.keyreleased = function(key)
+    default_keyrelease(key)
+    _keyReleased(key)
+  end
+  love.joystickpressed = function(joystick, button)
+    default_joystickpress(joystick, button)
+    _joystickPressed(joystick, button)
+  end
+  love.joystickreleased = function(joystick, button)
+    default_joystickrelease(joystick, button)
+    _joystickReleased(joystick, button)
+  end
+  love.joystickadded = function(joystick)
+    default_joystickadded(joystick)
+    _loadJoystick(joystick)
+  end
+
   return true
 end
 
@@ -84,11 +108,13 @@ end
 function _keyPressed(key)
   _pressed[key] = true
   _held[key] = true
+  print("down:", key)
 end
 
 function _keyReleased(key)
   _released[key] = true
   _held[key] = false
+  print("up:  ", key)
 end
 
 function _loadJoystick(joystick)
