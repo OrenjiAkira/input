@@ -119,6 +119,10 @@ function INPUT.load(decoder)
          INPUT.setup(content), err
 end
 
+function INPUT.delete()
+  return FS.exists(_CONTROLS_FILENAME) and FS.remove(_CONTROLS_FILENAME)
+end
+
 function INPUT.getMap()
   return {
     digital = _digital,
