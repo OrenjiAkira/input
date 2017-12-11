@@ -391,13 +391,14 @@ function _drawDigital(g)
   local width, height = g.getDimensions()
   local handle = DIGITAL[_current]
   if not handle then return end
-  local key1 = _mappings.digital[handle][1]
-  local key2 = _mappings.digital[handle][2]
-  key1 = (type(key1) == 'number') and ("BTN %d"):format(key1) or "UNSET"
-  key2 = (type(key2) == 'number') and ("BTN %d"):format(key2) or "UNSET"
+  local key1, key2 = unpack(_mappings.digital[handle])
+  local btn1 = (type(key1) == 'number') and ("BTN %d"):format(key1)
+  local btn2 = (type(key2) == 'number') and ("BTN %d"):format(key2)
+  key1 = (type(key1) == 'string') and key1 or "UNSET"
+  key2 = (type(key2) == 'string') and key2 or "UNSET"
 
   if handle and key1 then
-    _drawWindow(map_the_digital:format(handle, key1, key2),
+    _drawWindow(map_the_digital:format(handle, btn1 or key1, btn2 or key2),
                 width/2, height/2, 360, "center"
     )
   end
