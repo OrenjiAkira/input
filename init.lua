@@ -119,8 +119,12 @@ function INPUT.load(decoder)
          INPUT.setup(content), err
 end
 
-function INPUT.getMaps()
-  return _digital, _analog, _hat
+function INPUT.getMap()
+  return {
+    digital = _digital,
+    analog = _analog,
+    hat = _hat,
+  }
 end
 
 function _isActionActivated(action_keys, activated_keys, idx)

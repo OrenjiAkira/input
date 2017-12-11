@@ -113,8 +113,8 @@ function love.update(dt)
   INPUT.flush()
 
   if love.keyboard.isDown('f1') then
-    local digital, analog, hat = INPUT.getMaps()
-    CONFIGURE(INPUT, {digital = digital, analog = analog, hat = hat})
+    local mappings = INPUT.getMap()
+    CONFIGURE(INPUT, mappings)
   end
 end
 
