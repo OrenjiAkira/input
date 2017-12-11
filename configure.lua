@@ -1,20 +1,37 @@
 
-local Configure = {}
+--[[ QUIT AND LOAD ]]--
+
+local CALLBACKS = {
+  'keypressed',
+  'keyreleased',
+  'joystickpressed',
+  'joystickreleased',
+  'joystickhat',
+  'mousepressed',
+  'mousereleased',
+  'update',
+  'draw'
+}
 
 -- constants
-local STATES = {
-  "GREETINGS", "DIGITAL", "ANALOG", "CONFIRM",
-}
 local DIV = "-------------------------------"
 local LINE = "-- "
+local STATES = {"GREETINGS", "DIGITAL", "ANALOG", "CONFIRM"}
 local ANALOG
 local DIGITAL
 local HAT
 
--- locals
+-- important locals
 local _joystick
 local _mappings
 local _context
+
+-- forward declaration
+local _input
+local _toggleEvents
+
+-- configure state
+local Configure = {}
 
 function Configure.load(mappings, joystick)
   assert(mappings and mappings.digital and mappings.analog,
@@ -39,6 +56,22 @@ function Configure.load(mappings, joystick)
   _joystick = joystick
   _mappings = mappings
   _context = 1
+end
+
+
+-- loads or unloads inputs
+function _toggleEvents()
+  for _,event in pairs(CALLBACKS) do
+    Configure[event], love[event] = love[event], Configure[event]
+  end
+end
+
+function Configure.quit(mappings)
+  print(LINE.."All set, carry on")
+  print(DIV)
+  _input.setup(mappings.digital, mappings.analog, mappings.hat)
+  _input = nil
+  _toggleEvents()
 end
 
 
@@ -416,6 +449,12 @@ end
 
 
 
-return Configure
-
+-- mappings.digital is a digital mapping table (handle -> key/button)
+-- mappings.analog is an analog mapping table (handle -> axis_id)
+return function (input, mappings)
+  assert(input, "No input module loaded")
+  _toggleEvents()
+  _input = input
+  Configure.load(mappings, input.getJoystick())
+end
 
