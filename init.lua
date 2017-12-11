@@ -101,7 +101,6 @@ function INPUT.save(encoder)
   }
   local content = encoder and encoder(map) or "return ".._stringTable(map)
   local file = assert(FS.newFile(_CONTROLS_FILENAME, "w"))
-  print(content)
   assert(file:write(content))
   return assert(file:close())
 end
