@@ -50,7 +50,13 @@ function love.load()
   if not loaded then
     -- or you can manually load it from memory with 'setup'
     -- > returns true always
-    INPUT.setup(DIGITAL, ANALOG, HAT)
+    INPUT.setup(
+      {
+        digital = DIGITAL,
+        analog = ANALOG,
+        hat = HAT,
+      }
+    )
   end
 end
 

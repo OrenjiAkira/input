@@ -49,10 +49,10 @@ function INPUT.getJoystick()
   return _joystick
 end
 
-function INPUT.setup(digital, analog, hat)
-  _digital = digital or {}
-  _analog = analog or {}
-  _hat = hat or {}
+function INPUT.setup(inputmap)
+  _digital = inputmap.digital or {}
+  _analog  = inputmap.analog or {}
+  _hat     = inputmap.hat or {}
 
   local default_keypress        = love.keypressed       or _NOTHING
   local default_keyrelease      = love.keyreleased      or _NOTHING
@@ -116,7 +116,7 @@ function INPUT.load(decoder)
     content = content and content()
   end
   return content and
-         INPUT.setup(content.digital, content.analog, content.hat), err
+         INPUT.setup(content), err
 end
 
 function INPUT.getMaps()

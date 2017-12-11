@@ -69,7 +69,7 @@ end
 function Configure.quit(mappings)
   print(LINE.."All set, carry on")
   print(DIV)
-  _input.setup(mappings.digital, mappings.analog, mappings.hat)
+  _input.setup(mappings)
   _input = nil
   _toggleEvents()
 end
