@@ -3,7 +3,6 @@ local INPUT = {}
 local FS = love.filesystem
 
 local _TYPE_ENUM = { string = 0, number = 1, table = 2 }
-local _CONTROLS_FILENAME = "controls"
 local _NOTHING = function () end
 
 local _joystick
@@ -92,7 +91,7 @@ function INPUT.flush()
   for k in pairs(_released) do _released[k] = false end
 end
 
-function INPUT.save(encoder)
+function INPUT.save(path, encoder)
   if not _digital or not _analog or not _hat then return end
   local map = {
     digital = _digital,
@@ -100,26 +99,26 @@ function INPUT.save(encoder)
     hat = _hat,
   }
   local content = encoder and encoder(map) or "return ".._stringTable(map)
-  local file = assert(FS.newFile(_CONTROLS_FILENAME, "w"))
+  local file = assert(FS.newFile(path, "w"))
   assert(file:write(content))
   return assert(file:close())
 end
 
-function INPUT.load(decoder)
+function INPUT.load(path, decoder)
   local content, err
   if decoder then
-    content, err = _loadFileString(_CONTROLS_FILENAME)
+    content, err = _loadFileString(path)
     content = content and decoder(content)
   else
-    content, err = FS.load(_CONTROLS_FILENAME)
+    content, err = FS.load(path)
     content = content and content()
   end
   return content and
          INPUT.setup(content), err
 end
 
-function INPUT.delete()
-  return FS.exists(_CONTROLS_FILENAME) and FS.remove(_CONTROLS_FILENAME)
+function INPUT.delete(path)
+  return FS.exists(path) and FS.remove(path)
 end
 
 function INPUT.getMap()
@@ -168,7 +167,7 @@ function _joystickReleased(joystick, button)
 end
 
 function _loadFileString(filename)
-  local filedata, err = FS.newFileData(_CONTROLS_FILENAME)
+  local filedata, err = FS.newFileData(filename)
   return filedata and filedata:getString(), err
 end
 

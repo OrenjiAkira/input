@@ -46,7 +46,7 @@ function love.load()
   -- > returns true if the controls were successfully loaded
   love.filesystem.setIdentity("joystick")
   local decoder = (USE_JSON and JSON.decode) or (USE_TOML and TOML.parse)
-  local loaded = INPUT.load(decoder)
+  local loaded = INPUT.load("controls", decoder)
   if not loaded then
     -- or you can manually load it from memory with 'setup'
     -- > returns true always
@@ -74,7 +74,7 @@ function love.quit()
       return TOML.encode(data)
     end
   end
-  INPUT.save(encoder)
+  INPUT.save("controls", encoder)
 end
 
 
