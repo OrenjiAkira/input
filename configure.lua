@@ -253,9 +253,9 @@ end
 local PD = 16
 local LH = 1
 local FSZ = 16
-local NEUTRAL = {0xff, 0xff, 0xff}
-local HIGHLIGHT = {244, 199, 0}
-local WINDOW = {0x1d, 0x35, 0x47}
+local NEUTRAL = {1, 1, 1}
+local HIGHLIGHT = {244/255, 199/255, 0}
+local WINDOW = {0x1d/255, 0x35/255, 0x47/255}
 local FONT
 
 local _drawWindow
