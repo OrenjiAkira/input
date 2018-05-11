@@ -31,7 +31,7 @@ function INPUT.wasActionReleased(action)
 end
 
 function INPUT.wasAnyPressed(deadzone)
-  if not deadzone or not _joystick then
+  if deadzone and _joystick then
     for axis_name, axis in pairs(_analog) do
       if _joystick:getAxis(axis) >= deadzone then
         return true
