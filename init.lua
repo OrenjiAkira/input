@@ -30,6 +30,27 @@ function INPUT.wasActionReleased(action)
   return _digital[action] and _isActionActivated(_digital[action], _released)
 end
 
+function INPUT.wasAnyPressed(deadzone)
+  if deadzone and _joystick then
+    for axis_name, axis in pairs(_analog) do
+      if _joystick:getAxis(axis) >= deadzone then
+        return true
+      end
+    end
+    for hat_name, hat in pairs(_hat) do
+      if _joystick:getHat(hat) ~= 'c' then
+        return true
+      end
+    end
+  end
+  for action in pairs(_digital) do
+    if _isActionActivated(_digital[action], _pressed) then
+      return true
+    end
+  end
+  return false
+end
+
 function INPUT.isActionDown(action)
   return _digital[action] and _isActionActivated(_digital[action], _held)
 end
