@@ -83,6 +83,7 @@ local _pressed
 local _current
 local _flush
 local _wait
+local _hat
 local _loadJoystick
 local _cycleActionInput
 local _updateGreetings
