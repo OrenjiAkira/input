@@ -1,5 +1,5 @@
 
-# SIMPLE INPUT MODULE FOR LOVE2D
+# LIT - Love Input Tool
 
 Input capture compatible with controllers. Divides input into "digital" and
 "analogic", and creates a layer of abstraction so you can worry about only
